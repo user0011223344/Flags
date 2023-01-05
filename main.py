@@ -1,3 +1,6 @@
+# данный файл является модификацией исходного
+# потому что библиотеки в исходном проекте старые и при запуске вылезает много ошибок
+# После различных исправлений скрипт запускается, НО его точность страдает
 from pylab import *
 from matplotlib.pyplot import imshow
 import numpy as np
@@ -8,11 +11,11 @@ import warnings
 warnings.simplefilter("ignore")
 
 
-def dist(p1, p2):           # odległość między punktami
+def dist(p1, p2):           # расстояние между точками
     return sqrt((p2[0] - p1[0]) ** 2 + (p2[1] - p1[1]) ** 2)
 
 
-def pers_trans(img, coords):    # transformacja w celu wycięcia
+def pers_trans(img, coords):    # преобразование для вырезания
     pts1 = np.float32(coords)
     a = coords[0]
     b = coords[1]
@@ -30,14 +33,14 @@ def pers_trans(img, coords):    # transformacja w celu wycięcia
     return dst
 
 
-def draw_rec(cnt):          # wyznaczenie współrzędnych prostokąta wokół konturu
+def draw_rec(cnt):          # определение координат прямоугольника вокруг контура
     rect = cv2.minAreaRect(cnt)
     box = cv2.boxPoints(rect)
     box = np.int0(box)
     return box
 
 
-def find(lista, ekstr, ktory):           # wyszukiwanie skrajnych wierzchołków
+def find(lista, ekstr, ktory):           # поиск крайних вершин
     index = 0
     if ekstr == 'max':
         for i in range(len(lista)):
@@ -51,7 +54,7 @@ def find(lista, ekstr, ktory):           # wyszukiwanie skrajnych wierzchołków
     return lista[index]
 
 
-def corners(points):            # definicja skrajnych wierzchołków
+def corners(points):            # определение крайних вершин
     a = find(points, 'max', 0)
     b = find(points, 'max', 1)
     c = find(points, 'min', 0)
@@ -60,7 +63,7 @@ def corners(points):            # definicja skrajnych wierzchołków
 
 
 def fun(img, canny_first, canny_second, coef_blur, count_morph):
-    imgray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)             # wstępne przetwarzanie obrazu w celu wykrycia konturów
+    imgray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)             # предварительная обработка изображения для обнаружения контуров
 
     imgray = cv2.medianBlur(imgray, coef_blur)
     imgray = cv2.Canny(imgray, canny_first, canny_second)
@@ -69,14 +72,14 @@ def fun(img, canny_first, canny_second, coef_blur, count_morph):
     imgray = cv2.dilate(imgray, kernel, iterations=count_morph)
     imgray = cv2.erode(imgray, kernel, iterations=count_morph)
 
-    _, contours, hierarchy = cv2.findContours(imgray, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours, hierarchy = cv2.findContours(imgray, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
     return contours, hierarchy
 
 
 def crop(img, canny_first, canny_second, coef_blur, count_morph, size):
     contours, hierarchy = fun(img, canny_first, canny_second, coef_blur, count_morph)
-    hier = hierarchy[0]                          # główna funkcja do wycinania flagi ze zdjęcia
+    hier = hierarchy[0]                          # основная функция для вырезания флага из фотографии
 
     points = []
     boxes = []
@@ -94,14 +97,14 @@ def crop(img, canny_first, canny_second, coef_blur, count_morph, size):
     return img, boxes
 
 
-def adjust_gamma(image, gamma=1.0):         # korekcja gamma
+def adjust_gamma(image, gamma=1.0):         # гамма-коррекция
     invGamma = 1.0 / gamma
     table = np.array([((i / 255.0) ** invGamma) * 255
                       for i in np.arange(0, 256)]).astype("uint8")
     return cv2.LUT(image, table)
 
 
-def match(flag, n):           # wyszukanie najlepszego dopasowania
+def match(flag, n):           # поиск наилучшего соответствия
     rows_flag, cols_flag = flag.shape[:2]
     fit = []
     for i in range(1, n+1):
@@ -117,8 +120,9 @@ def match(flag, n):           # wyszukanie najlepszego dopasowania
             y = cols_flag
         else:
             y = cols_base
-        flag = cv2.resize(flag, (y, x)).astype(np.float)
-        base = cv2.resize(base, (y, x)).astype(np.float)
+        flag = float64(cv2.resize(flag, (y, x)))
+        base = float64(cv2.resize(base, (y, x)))
+
         fit.append(sum(abs((flag-base))))
         print(fit[-1])
 
@@ -133,11 +137,15 @@ def match(flag, n):           # wyszukanie najlepszego dopasowania
 # MAIN
 fig = figure(figsize=(20, 10))
 
-random = cv2.imread(os.getcwd() + '//flags/random/9.jpg')
+# Тут пишем путь до нашего изображения
+random = cv2.imread(os.getcwd() + '//flags/random/6.jpg')
 random = cv2.cvtColor(random, cv2.COLOR_RGB2BGR)
 
 subplot(1, 2, 1)
+
+#error
 result, box = crop(random, 100, 200, 3, 1, 100)
+
 result = adjust_gamma(result, 0.7)
 
 imshow(random)
