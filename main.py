@@ -7,14 +7,15 @@ import numpy as np
 import os
 import cv2
 import warnings
-import argparse
+import tkinter as tk
+from tkinter import filedialog
+from PIL import ImageTk, Image
 
 warnings.simplefilter("ignore")
 
 
 # Change me
 INPUT_FILENAME = "/flags/input_img/6.jpg"
-
 OUTPUT_PDF_FILENAME = "flags.pdf"
 
 
@@ -145,55 +146,108 @@ def search_best_match(input_img):           # поиск наилучшего с
 
     best_fit = min(fit)
     found_idx = fit.index(best_fit)
-    found_idx = found_idx + 1
+    found_idx = found_idx
 
     print(f'\nBest match: {best_fit}')
-    print(f"Found etalon: {etalon_filenames_list[found_idx].split('Flags/flags/')[1]}")
-    print(f"Input filename: {args.input_img}\n\n")
+    print(f"Found etalon {found_idx}: {etalon_filenames_list[found_idx].split('Flags/flags/')[1]}")
+    print(f"Input filename: {input_filename}\n\n")
+    show_found_image(etalon_filenames_list[found_idx])
+
     return etalon_filenames_list[found_idx]
 
 
-# MAIN
+def main():
+    global input_filename, window
+    input_filename = filedialog.askopenfilename()
+    lbl.configure(text=f"Выбран файл:\n{input_filename}")
+    
+    show_input_image(input_filename)
 
-parser = argparse.ArgumentParser()
-parser.add_argument('-i', '--input_img',default=INPUT_FILENAME, required=False)
-
-args = parser.parse_args()
-
-# Создание выходного pdf-файла
-output_pdf_file = figure(figsize=(20, 10))
-
-
-input_img = cv2.imread(os.getcwd() + args.input_img)
-# Конвертируем входную картинку в Blue Green Red (потому что opencv так работает)
-input_img = cv2.cvtColor(input_img, cv2.COLOR_RGB2BGR)
-
-# раньше здесь была ошибка
-cutted_and_transformated_img, list_of_boxes_coordinates = crop(input_img, 100, 200, 3, 1, 100)
-cutted_and_transformated_img = adjust_gamma(cutted_and_transformated_img, 0.7)
-
-# добавление строки столбцов в выходной pdf-файл
-# кол-во строк = 1
-# кол-во столбцов = 2
-# индекс = 1
-subplot(1, 2, 1)
-# Добавить входную картинку в выходной pdf-файл
-imshow(input_img)
-
-# главная функция сравнения
-found_etalon_filename = search_best_match(cutted_and_transformated_img)
+    # Создание выходного pdf-файла
+    output_pdf_file = figure(figsize=(20, 10))
 
 
+    input_img = cv2.imread(input_filename)
+    # Конвертируем входную картинку в Blue Green Red (потому что opencv так работает)
+    input_img = cv2.cvtColor(input_img, cv2.COLOR_RGB2BGR)
 
-found_img = cv2.imread(found_etalon_filename)
-found_img = cv2.cvtColor(found_img, cv2.COLOR_RGB2BGR)
+    # раньше здесь была ошибка
+    cutted_and_transformated_img, list_of_boxes_coordinates = crop(input_img, 100, 200, 3, 1, 100)
+    cutted_and_transformated_img = adjust_gamma(cutted_and_transformated_img, 0.7)
 
-# добавление строки столбцов в выходной pdf-файл
-# кол-во строк = 1
-# кол-во столбцов = 2
-# индекс = 2
-subplot(1, 2, 2)
-# Добавить эталонную картинку в выходной pdf-файл
-imshow(found_img)
+    # добавление строки столбцов в выходной pdf-файл
+    # кол-во строк = 1
+    # кол-во столбцов = 2
+    # индекс = 1
+    subplot(1, 2, 1)
+    # Добавить входную картинку в выходной pdf-файл
+    imshow(input_img)
 
-output_pdf_file.savefig('flags.pdf')
+    # главная функция сравнения
+    found_etalon_filename = search_best_match(cutted_and_transformated_img)
+    print(found_etalon_filename)
+
+
+    found_img = cv2.imread(found_etalon_filename)
+    found_img = cv2.cvtColor(found_img, cv2.COLOR_RGB2BGR)
+
+    # добавление строки столбцов в выходной pdf-файл
+    # кол-во строк = 1
+    # кол-во столбцов = 2
+    # индекс = 2
+    subplot(1, 2, 2)
+    # Добавить эталонную картинку в выходной pdf-файл
+    imshow(found_img)
+
+    output_pdf_file.savefig('flags.pdf')
+
+    
+
+def show_input_image(input_filename):
+    global input_photo, input_image
+    image = Image.open(input_filename)
+    #resized = image.resize((400, 400))
+    #resized.save(input_filename+"_400.jpg")
+
+    #image = Image.open(input_filename+"_400.jpg")
+    input_photo = ImageTk.PhotoImage(image)
+    input_image.create_image(0, 0, anchor='nw', image=input_photo)
+    input_image.grid(row=2, column=0)
+
+def show_found_image(found_filename):
+    global output_photo, found_image
+    image = Image.open(found_filename)
+    #resized = image.resize((400, 400))
+    #resized.save(found_filename+"_400.jpg")
+
+    #image = Image.open(found_filename+"_400.jpg")
+    output_photo = ImageTk.PhotoImage(image)
+    found_image.create_image(0, 0, anchor='nw', image=output_photo)
+    found_image.grid(row=2, column=1)
+
+# глобальная переменная
+input_filename = ""
+
+# создание графического окна через tkinter
+window = tk.Tk()
+
+window.title("Поиск соответствия между картинками")
+
+lbl = tk.Label(window, text="Никакой файл не выбран")
+lbl.grid(column=0, row=0)
+
+input_filename_button = tk.Button(text="Выбрать входной файл и получить результат", command=main)
+input_filename_button.grid(column=0, row=1)
+
+input_photo = None
+input_image = tk.Canvas(window, height=400, width=400)
+input_image.create_image(0, 0, anchor='nw', image=input_photo)
+input_image.grid(row=2, column=0)
+
+
+output_photo = None
+found_image = tk.Canvas(window, height=400, width=400)
+found_image.create_image(0, 0, anchor='nw', image=output_photo)
+found_image.grid(row=2, column=1)
+
+window.mainloop()
